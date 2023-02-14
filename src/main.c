@@ -53,7 +53,13 @@ int main(int argc, char **argv) {
 		width = 8;
 		height = 16;
 	}
-	error = FT_Set_Pixel_Sizes(face, width, height);
+
+	error = FT_Set_Pixel_Sizes(face,
+			width * face->units_per_EM /
+				(face->bbox.xMax - face->bbox.xMin),
+			height * face->units_per_EM /
+				(face->bbox.yMax - face->bbox.yMin)
+			);
 	if (error) {
 		fprintf(stderr, "Failed to set size %dx%d\n", width, height);
 		return 1;
