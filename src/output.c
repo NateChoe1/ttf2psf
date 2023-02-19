@@ -20,7 +20,6 @@ struct glyph {
 struct glyph *read_face(FT_Face face, int *glyph_count);
 static int add_code(struct glyph *glyph, FT_ULong code);
 static int add_glyph(struct glyph **face, FT_UInt index);
-static int add_new_char(struct glyph **face, FT_UInt index, FT_ULong charcode);
 static void free_glyph(struct glyph *glyph);
 static int write_glyph(FT_Face face, int width, int height, FILE *output);
 static inline int get_bit(FT_Face face,
@@ -80,20 +79,21 @@ struct glyph *read_face(FT_Face face, int *glyph_count) {
 
 	*glyph_count = 0;
 
-	for (int i = 0; i <= 0xff; ++i) {
-		gindex = FT_Get_Char_Index(face, i);
-		add_new_char(next, gindex, i);
-		next = &(*next)->next;
-		++*glyph_count;
-	}
-
 	charcode = FT_Get_First_Char(face, &gindex);
 	while (gindex != 0 && *glyph_count < 512) {
-		if (charcode <= 0xff) {
-			goto next_char;
-		}
-
 		struct glyph *iter = ret;
+
+		FT_ULong newchar = charcode;
+		FT_UInt newglyph = gindex;
+
+		if (*glyph_count == 32) {
+			newchar = 32;
+			newglyph = FT_Get_Char_Index(face, newchar);
+			goto add_glyph;
+		}
+		/* Due to a kernel bug, char 32 MUST be the actual char 32. The
+		 * kernel, rather than using the actual character code for ' '
+		 * to represent blank spaces, uses the 32nd character slot. */
 
 		while (iter != NULL) {
 			if (gindex == iter->index) {
@@ -105,8 +105,15 @@ struct glyph *read_face(FT_Face face, int *glyph_count) {
 			iter = iter->next;
 		}
 
+add_glyph:
+
 		++*glyph_count;
-		add_new_char(next, gindex, charcode);
+		if (add_glyph(next, newglyph)) {
+			goto error;
+		}
+		if (add_code(*next, newchar)) {
+			goto error;
+		}
 		next = &(*next)->next;
 
 next_char:
@@ -141,16 +148,6 @@ static int add_glyph(struct glyph **face, FT_UInt index) {
 	new_glyph->code = NULL;
 	new_glyph->next = NULL;
 	*face = new_glyph;
-	return 0;
-}
-
-static int add_new_char(struct glyph **face, FT_UInt index, FT_ULong charcode) {
-	if (add_glyph(face, index)) {
-		return 1;
-	}
-	if (add_code(*face, charcode)) {
-		return 1;
-	}
 	return 0;
 }
 
