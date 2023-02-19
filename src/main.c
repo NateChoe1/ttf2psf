@@ -57,16 +57,15 @@ int main(int argc, char **argv) {
 	}
 
 	{
-		long pwidth = width * face->units_per_EM /
-			(face->bbox.xMax - face->bbox.xMin);
-		long pheight = height * face->units_per_EM /
-			(face->bbox.yMax - face->bbox.yMin);
-
-		pwidth = width * 3 / 2;
-		pheight = height * 3 / 2;
-
-		error = FT_Set_Pixel_Sizes(face, min(pwidth, pheight), 0);
-		/* TODO: Get the em box working properly */
+		FT_Size_RequestRec request = {
+			.type = FT_SIZE_REQUEST_TYPE_BBOX,
+			.width = width << 6,
+			.height = height << 6,
+			.horiResolution = 0,
+			.vertResolution = 0,
+		};
+		error = FT_Request_Size(face, &request);
+		/* TODO: Get bounding box working */
 	}
 
 	if (error) {
