@@ -5,22 +5,9 @@
 #include FT_FREETYPE_H
 
 #include <output.h>
-
-struct code {
-	FT_ULong charcode;
-	struct code *next;
-}; /* All the 32 bit character codes that correspond to a glyph */
-
-struct glyph {
-	FT_UInt index;
-	struct code *code;
-	struct glyph *next;
-}; /* Linked list containing all the glyphs in a font face */
+#include <charset.h>
 
 struct glyph *read_face(FT_Face face, int *glyph_count);
-static int add_code(struct glyph *glyph, FT_ULong code);
-static int add_glyph(struct glyph **face, FT_UInt index);
-static void free_glyph(struct glyph *glyph);
 static int write_glyph(FT_Face face, int width, int height, FILE *output);
 static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height);
@@ -28,18 +15,28 @@ static int div_up(int num, int denom);
 
 int write_psf(int width, int height, struct psf_interface *interface,
 		FT_Face face, FILE *output) {
-	int glyph_count;
-	struct glyph *glyphs = read_face(face, &glyph_count);
+	struct charset *charset;
+	struct glyph *iter;
 	FT_Error error;
-	if (glyphs == NULL) {
+
+	charset = new_charset(face);
+	if (charset == NULL) {
 		return 1;
 	}
-
-	if (interface->write_header(width, height, 1, glyph_count, output)) {
-		return 1;
+	for (int i = 0x00; i <= 0x7f; ++i) {
+		if (add_char(charset, i)) {
+			goto error;
+		}
 	}
+	/* Generate charset */
 
-	for (struct glyph *iter = glyphs; iter != NULL; iter = iter->next) {
+	if (interface->write_header(width, height, 1, charset->size, output)) {
+		goto error;
+	}
+	/* Write header */
+
+	iter = charset->first;
+	while (iter != NULL) {
 		error = FT_Load_Glyph(face, iter->index,
 				FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
 		if (error) {
@@ -52,119 +49,31 @@ int write_psf(int width, int height, struct psf_interface *interface,
 		if (write_glyph(face, width, height, output)) {
 			goto error;
 		}
+		iter = iter->next;
 	}
+	/* Write glyphs */
 
-	for (struct glyph *g = glyphs; g != NULL; g = g->next) {
-		struct code *code = g->code;
+	iter = charset->first;
+	while (iter != NULL) {
+		struct code *code = iter->code;
 		while (code != NULL) {
-			interface->write_unichar(code->charcode, output);
+			if (interface->write_unichar(code->charcode, output)) {
+				goto error;
+			}
 			code = code->next;
 		}
-		interface->write_separator(output);
+		if (interface->write_separator(output)) {
+			goto error;
+		}
+		iter = iter->next;
 	}
+	/* Write unicode table */
 
-	free_glyph(glyphs);
+	free_charset(charset);
 	return 0;
-
 error:
-	free_glyph(glyphs);
+	free_charset(charset);
 	return 1;
-}
-
-struct glyph *read_face(FT_Face face, int *glyph_count) {
-	struct glyph *ret = NULL;
-	struct glyph **next = &ret;
-	FT_ULong charcode;
-	FT_UInt gindex;
-
-	*glyph_count = 0;
-
-	charcode = FT_Get_First_Char(face, &gindex);
-	while (gindex != 0 && *glyph_count < 512) {
-		struct glyph *iter = ret;
-
-		FT_ULong newchar = charcode;
-		FT_UInt newglyph = gindex;
-
-		if (*glyph_count == 32) {
-			newchar = 32;
-			newglyph = FT_Get_Char_Index(face, newchar);
-			goto add_glyph;
-		}
-		/* Due to a kernel bug, char 32 MUST be the actual char 32. The
-		 * kernel, rather than using the actual character code for ' '
-		 * to represent blank spaces, uses the 32nd character slot. */
-
-		while (iter != NULL) {
-			if (gindex == iter->index) {
-				if (add_code(iter, charcode)) {
-					goto error;
-				}
-				goto next_char;
-			}
-			iter = iter->next;
-		}
-
-add_glyph:
-
-		++*glyph_count;
-		if (add_glyph(next, newglyph)) {
-			goto error;
-		}
-		if (add_code(*next, newchar)) {
-			goto error;
-		}
-		next = &(*next)->next;
-
-next_char:
-		charcode = FT_Get_Next_Char(face, charcode, &gindex);
-	}
-
-	return ret;
-error:
-	free_glyph(ret);
-	return NULL;
-}
-
-static int add_code(struct glyph *glyph, FT_ULong code) {
-	struct code *new_code;
-	new_code = malloc(sizeof *new_code);
-	if (new_code == NULL) {
-		return 1;
-	}
-	new_code->charcode = code;
-	new_code->next = glyph->code;
-	glyph->code = new_code;
-	return 0;
-}
-
-static int add_glyph(struct glyph **face, FT_UInt index) {
-	struct glyph *new_glyph;
-	new_glyph = malloc(sizeof *new_glyph);
-	if (new_glyph == NULL) {
-		return 1;
-	}
-	new_glyph->index = index;
-	new_glyph->code = NULL;
-	new_glyph->next = NULL;
-	*face = new_glyph;
-	return 0;
-}
-
-static void free_glyph(struct glyph *glyph) {
-	while (glyph != NULL) {
-		struct code *iter = glyph->code;
-		while (iter != NULL) {
-			struct code *next_iter = iter->next;
-			free(iter);
-			iter = next_iter;
-		}
-
-		struct glyph *next_glyph;
-		next_glyph = glyph->next;
-		free(glyph);
-		glyph = next_glyph;
-	}
 }
 
 static int write_glyph(FT_Face face, int width, int height, FILE *output) {

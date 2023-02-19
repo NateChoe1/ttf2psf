@@ -5,7 +5,6 @@
 #include <util.h>
 #include <output.h>
 
-/* TODO: Actually implement psf2 */
 struct psf2_header {
 	uint8_t magic[4];	/* Always \x72\xb5\x4a\x86 */
 	uint32_t version;	/* Always 0 */
