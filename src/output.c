@@ -22,6 +22,7 @@ static inline int write_glyph(FT_Face face, FILE *output,
 		int width, int height);
 static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height);
+static int div_up(int num, int denom);
 
 int write_output(FT_Library library, FT_Face face, FILE *output,
 		int width, int height) {
@@ -52,9 +53,6 @@ int write_output(FT_Library library, FT_Face face, FILE *output,
 	for (FT_ULong charcode = 0; charcode < glyph_count; ++charcode) {
 		FT_Load_Char(face, charcode,
 				FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
-		/*
-		printf("%c\n", charcode);
-		*/
 		write_glyph(face, output, width, height);
 	}
 	return 0;
@@ -79,20 +77,9 @@ static inline int write_glyph(FT_Face face, FILE *output,
 				curr_char <<= 1;
 				curr_char |= get_bit(face,
 						i, j*8 + k, width, height);
-				/*
-				if (curr_char & 1) {
-					printf("XX");
-				}
-				else {
-					printf("  ");
-				}
-				*/
 			}
 			fputc(curr_char, output);
 		}
-		/*
-		putchar('\n');
-		*/
 	}
 	return 0;
 }
@@ -103,10 +90,10 @@ static inline int get_bit(FT_Face face,
 	const FT_Bitmap *bmp = &glyph->bitmap;
 	const int
 		left_edge = glyph->bitmap_left,
-		top_edge = height - glyph->bitmap_top - 2,
-		right_edge = glyph->bitmap_left + bmp->width * 3,
+		top_edge = (height-1) - glyph->bitmap_top -
+			div_up(face->bbox.yMin, face->units_per_EM),
+		right_edge = left_edge + bmp->pitch * 8,
 		bot_edge = top_edge + bmp->rows;
-	/* TODO: There may be an off-by-one error in top-edge */
 
 	if (col < left_edge || col >= right_edge ||
 			row < top_edge || row >= bot_edge) {
@@ -125,4 +112,9 @@ static inline int get_bit(FT_Face face,
 	row_data += bmp->pitch * bmp_y;
 
 	return (row_data[bmp_x/8] >> ((8-bmp_x) % 8)) & 1;
+}
+
+static int div_up(int num, int denom) {
+	int ret = num / denom;
+	return ret + (num % denom) ? 1:0;
 }

@@ -61,18 +61,11 @@ int main(int argc, char **argv) {
 		long pheight = height * face->units_per_EM /
 			(face->bbox.yMax - face->bbox.yMin);
 
-		/*
-		printf("%ld %ld %ld\n", face->units_per_EM, face->bbox.xMax, face->bbox.xMin);
-		printf("%ld %ld\n", pwidth, pheight);
-		*/
-		pwidth = width;
-		pheight = height;
+		pwidth = width * 3 / 2;
+		pheight = height * 3 / 2;
 
 		error = FT_Set_Pixel_Sizes(face, min(pwidth, pheight), 0);
-		/*
-		printf("%ld %ld : %hu %hu\n", pwidth, pheight,
-				face->size->metrics.x_ppem, face->size->metrics.y_ppem);
-				*/
+		/* TODO: Get the em box working properly */
 	}
 
 	if (error) {
