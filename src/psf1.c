@@ -5,7 +5,7 @@
 #include <output.h>
 
 struct psf1_header {
-	char magic[2];
+	uint8_t magic[2];
 	uint8_t mode;
 	uint8_t char_size;
 };
@@ -22,25 +22,59 @@ struct psf1_header {
 #define PSF1_STARTSEQ 0xfffe
 /* These are unused */
 
-int write_psf1(FT_Face face, FILE *output, int height) {
+static int write_psf1_header(int width, int height, int has_unicode, int glyphs,
+		FILE *output);
+static int write_psf1_unichar(FT_ULong charcode, FILE *output);
+static int write_psf1_startseq(FILE *output);
+static int write_psf1_separator(FILE *output);
+
+struct psf_interface psf1_interface = {
+	.write_header = write_psf1_header,
+	.write_unichar = write_psf1_unichar,
+	.write_startseq = write_psf1_startseq,
+	.write_separator = write_psf1_separator,
+};
+/* This is the most satisfying thing I've ever written */
+
+static int write_psf1_header(int width, int height, int has_unicode, int glyphs,
+		FILE *output) {
 	struct psf1_header header;
-	const int glyph_count = 256;
-	const int width = 8;
-
-	header.magic[0] = PSF1_MAGIC0;
-	header.magic[1] = PSF1_MAGIC1;
-	header.mode = 0;
-	header.char_size = height;
-
-	if (fwrite(&header, sizeof header, 1, output) < 1) {
-		fputs("Failed to write PSF header to output\n", stderr);
+	if ((glyphs != 256 && glyphs != 512) || width != 8) {
 		return 1;
 	}
-
-	for (FT_ULong charcode = 0; charcode < glyph_count; ++charcode) {
-		FT_Load_Char(face, charcode,
-				FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
-		write_glyph(face, output, width, height);
+	header.magic[0] = PSF1_MAGIC0;
+	header.magic[1] = PSF1_MAGIC1;
+	header.mode = PSF1_MODEHASTAB;
+	if (glyphs == 512) {
+		header.mode |= PSF1_MODE512;
+	}
+	header.char_size = height;
+	if (fwrite(&header, sizeof header, 1, output) < 1) {
+		return 1;
 	}
 	return 0;
+}
+
+static int write_psf1_unichar(FT_ULong charcode, FILE *output) {
+	if (charcode > 0xffff) {
+		return 1;
+	}
+	if (fputc(charcode & 0xff, output) == EOF) {
+		return 1;
+	}
+	charcode >>= 8;
+	if (fputc(charcode & 0xff, output) == EOF) {
+		return 1;
+	}
+	return 0;
+}
+
+static int write_psf1_startseq(FILE *output) {
+	const uint8_t startseq[] = { 0xff, 0xfe };
+	return fwrite(startseq, sizeof startseq, 1, output) < 1;
+}
+
+static int write_psf1_separator(FILE *output) {
+	const uint8_t separator[] = { 0xff, 0xff };
+	return fwrite(separator, sizeof separator, 1, output) < 1;
 }

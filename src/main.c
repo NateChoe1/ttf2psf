@@ -5,6 +5,7 @@
 #include FT_FREETYPE_H
 
 #include <psf1.h>
+#include <psf2.h>
 
 static void print_help(char *prog_name);
 static inline long min(long a, long b);
@@ -80,7 +81,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	return write_psf1(face, output, height * width / 8);
+	return write_psf(width, height, &psf2_interface, face, output);
 }
 
 static void print_help(char *prog_name) {

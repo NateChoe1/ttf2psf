@@ -1,9 +1,8 @@
 #ifndef HAVE_PSF1
 #define HAVE_PSF1
 
-#include <ft2build.h>
-#include FT_FREETYPE_H
+#include <output.h>
 
-int write_psf1(FT_Face face, FILE *output, int height);
+extern struct psf_interface psf1_interface;
 
 #endif
