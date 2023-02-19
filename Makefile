@@ -6,6 +6,7 @@ LIBS = freetype2
 LDFLAGS = $(shell pkg-config --libs $(LIBS))
 INSTALLDIR := /usr/bin/
 OUT = ttf2psf
+CLEAN = $(wildcard work/*) $(wildcard build/*)
 
 build/$(OUT): $(OBJ)
 	$(CC) $(OBJ) $(LDFLAGS) -o build/$(OUT)
@@ -18,3 +19,8 @@ install: build/$(OUT)
 
 uninstall: $(INSTALLDIR)/$(OUT)
 	rm $(INSTALLDIR)/$(OUT)
+
+clean: $(CLEAN)
+	rm $(CLEAN)
+
+.PHONY: install uninstall clean

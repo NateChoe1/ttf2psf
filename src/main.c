@@ -7,6 +7,7 @@
 #include <output.h>
 
 static void print_help(char *prog_name);
+static inline long min(long a, long b);
 
 int main(int argc, char **argv) {
 	int error;
@@ -54,12 +55,26 @@ int main(int argc, char **argv) {
 		height = 16;
 	}
 
-	error = FT_Set_Pixel_Sizes(face,
-			width * face->units_per_EM /
-				(face->bbox.xMax - face->bbox.xMin),
-			height * face->units_per_EM /
-				(face->bbox.yMax - face->bbox.yMin)
-			);
+	{
+		long pwidth = width * face->units_per_EM /
+			(face->bbox.xMax - face->bbox.xMin);
+		long pheight = height * face->units_per_EM /
+			(face->bbox.yMax - face->bbox.yMin);
+
+		/*
+		printf("%ld %ld %ld\n", face->units_per_EM, face->bbox.xMax, face->bbox.xMin);
+		printf("%ld %ld\n", pwidth, pheight);
+		*/
+		pwidth = width;
+		pheight = height;
+
+		error = FT_Set_Pixel_Sizes(face, min(pwidth, pheight), 0);
+		/*
+		printf("%ld %ld : %hu %hu\n", pwidth, pheight,
+				face->size->metrics.x_ppem, face->size->metrics.y_ppem);
+				*/
+	}
+
 	if (error) {
 		fprintf(stderr, "Failed to set size %dx%d\n", width, height);
 		return 1;
@@ -78,4 +93,11 @@ int main(int argc, char **argv) {
 static void print_help(char *prog_name) {
 	fprintf(stderr, "Usage: %s [font file] [output] (width) (height)\n",
 			prog_name);
+}
+
+static inline long min(long a, long b) {
+	if (a < b) {
+		return a;
+	}
+	return b;
 }

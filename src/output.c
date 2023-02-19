@@ -18,9 +18,9 @@ struct psf2_header {
 };
 
 static uint32_t htop32(uint32_t n); /* host to psf byte order (little-endian) */
-static inline int write_glyph(FT_GlyphSlotRec *glyph, FILE *output,
+static inline int write_glyph(FT_Face face, FILE *output,
 		int width, int height);
-static inline int get_bit(FT_GlyphSlotRec *glyph,
+static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height);
 
 int write_output(FT_Library library, FT_Face face, FILE *output,
@@ -52,7 +52,10 @@ int write_output(FT_Library library, FT_Face face, FILE *output,
 	for (FT_ULong charcode = 0; charcode < glyph_count; ++charcode) {
 		FT_Load_Char(face, charcode,
 				FT_LOAD_RENDER | FT_LOAD_MONOCHROME);
-		write_glyph(face->glyph, output, width, height);
+		/*
+		printf("%c\n", charcode);
+		*/
+		write_glyph(face, output, width, height);
 	}
 	return 0;
 }
@@ -66,7 +69,7 @@ static uint32_t htop32(uint32_t n) {
 	return * (uint32_t *) ret;
 }
 
-static inline int write_glyph(FT_GlyphSlotRec *glyph, FILE *output,
+static inline int write_glyph(FT_Face face, FILE *output,
 		int width, int height) {
 	for (int i = 0; i < height; ++i) {
 		for (int j = 0; j < (width+7) / 8; ++j) {
@@ -74,22 +77,34 @@ static inline int write_glyph(FT_GlyphSlotRec *glyph, FILE *output,
 			curr_char = 0x00;
 			for (int k = 0; k < 8; ++k) {
 				curr_char <<= 1;
-				curr_char |= get_bit(glyph, i, j*8 + k,
-						width, height);
+				curr_char |= get_bit(face,
+						i, j*8 + k, width, height);
+				/*
+				if (curr_char & 1) {
+					printf("XX");
+				}
+				else {
+					printf("  ");
+				}
+				*/
 			}
 			fputc(curr_char, output);
 		}
+		/*
+		putchar('\n');
+		*/
 	}
 	return 0;
 }
 
-static inline int get_bit(FT_GlyphSlotRec *glyph,
+static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height) {
+	const FT_GlyphSlot glyph = face->glyph;
 	const FT_Bitmap *bmp = &glyph->bitmap;
 	const int
 		left_edge = glyph->bitmap_left,
-		right_edge = glyph->bitmap_left + bmp->width,
-		top_edge = height - glyph->bitmap_top,
+		top_edge = height - glyph->bitmap_top - 2,
+		right_edge = glyph->bitmap_left + bmp->width * 3,
 		bot_edge = top_edge + bmp->rows;
 	/* TODO: There may be an off-by-one error in top-edge */
 
