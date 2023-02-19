@@ -4,7 +4,7 @@
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
-#include <output.h>
+#include <psf1.h>
 
 static void print_help(char *prog_name);
 static inline long min(long a, long b);
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	return write_output(library, face, output, width, height);
+	return write_psf1(face, output, height * width / 8);
 }
 
 static void print_help(char *prog_name) {
