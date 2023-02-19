@@ -23,7 +23,7 @@ int write_psf(int width, int height, struct psf_interface *interface,
 	if (charset == NULL) {
 		return 1;
 	}
-	for (int i = 0x00; i <= 0x7f; ++i) {
+	for (int i = 0x20; i <= 0x7f; ++i) {
 		if (add_char(charset, i)) {
 			goto error;
 		}

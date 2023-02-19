@@ -37,6 +37,16 @@ int add_char(struct charset *charset, FT_ULong charcode) {
 	struct glyph *new_glyph;
 	struct code *first_code;
 	FT_UInt gindex;
+
+	if (charset->size == 32 && charcode != 32) {
+		if (add_char(charset, 32)) {
+			return 1;
+		}
+	}
+	/* XXX: The character in position 32 MUST be ASCII ' ', as the kernel
+	 * doesn't check the unicode table to figure out what the blank
+	 * character is. */
+
 	new_glyph = malloc(sizeof *new_glyph);
 	if (new_glyph == NULL) {
 		return 1;
