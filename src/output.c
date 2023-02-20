@@ -6,6 +6,7 @@
 
 #include <output.h>
 #include <charset.h>
+#include <read_unichars.h>
 
 struct glyph *read_face(FT_Face face, int *glyph_count);
 static int write_glyph(FT_Face face, int width, int height, FILE *output);
@@ -14,6 +15,7 @@ static inline int get_bit(FT_Face face,
 static int div_up(int num, int denom);
 
 int write_psf(int width, int height, struct psf_interface *interface,
+		FILE *charset_file, FILE *equivalence_file,
 		FT_Face face, FILE *output) {
 	struct charset *charset;
 	struct glyph *iter;
@@ -23,10 +25,57 @@ int write_psf(int width, int height, struct psf_interface *interface,
 	if (charset == NULL) {
 		return 1;
 	}
-	for (int i = 0x20; i <= 0x7f; ++i) {
-		if (add_char(charset, i)) {
-			goto error;
+	for (;;) {
+		uint32_t *line;
+		int line_len;
+		line = read_unichars(charset_file, &line_len);
+		if (line == NULL) {
+			if (line_len == 0) {
+				break;
+			}
+			else {
+				goto error;
+			}
 		}
+		for (int i = 0; i < line_len; ++i) {
+			if (add_char(charset, line[i])) {
+				goto error;
+			}
+		}
+	}
+	for (;;) {
+		uint32_t *line;
+		int line_len;
+next_equivalence:
+		line = read_unichars(equivalence_file, &line_len);
+		if (line == NULL) {
+			if (line_len == 0) {
+				break;
+			}
+			else {
+				goto error;
+			}
+		}
+		for (int i = line_len - 1; i >= 0; --i) {
+			struct glyph *glyph;
+			glyph = search_glyph(charset, line[i]);
+			if (glyph == NULL) {
+				continue;
+			}
+			for (int j = 0; j < line_len; ++j) {
+				if (j == i) {
+					continue;
+				}
+				if (add_equivalent(glyph, line[j])) {
+					goto error;
+				}
+			}
+			goto next_equivalence;
+			/* This goto is basically a 2 level continue statement,
+			 * you can't do that in C all too well. */
+		}
+		fputs("Equivalence file includes characters not in the "
+				"charset!\n", stderr);
 	}
 	/* Generate charset */
 

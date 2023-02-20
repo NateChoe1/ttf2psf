@@ -15,6 +15,7 @@ struct psf_interface {
 };
 
 int write_psf(int width, int height, struct psf_interface *interface,
+		FILE *charset_file, FILE *equivalence_file,
 		FT_Face face, FILE *output);
 
 #endif
