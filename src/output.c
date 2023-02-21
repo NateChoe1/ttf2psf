@@ -165,8 +165,8 @@ static inline int get_bit(FT_Face face,
 	const FT_Bitmap *bmp = &glyph->bitmap;
 	const int
 		left_edge = glyph->bitmap_left,
-		top_edge = (height-1) - glyph->bitmap_top -
-			div_up(face->bbox.yMin, face->units_per_EM),
+		top_edge = (height - 1) - glyph->bitmap_top -
+			div_up(face->bbox.yMin, face->units_per_EM) - 1,
 		right_edge = left_edge + bmp->pitch * 8,
 		bot_edge = top_edge + bmp->rows;
 
@@ -186,7 +186,7 @@ static inline int get_bit(FT_Face face,
 	}
 	row_data += bmp->pitch * bmp_y;
 
-	return (row_data[bmp_x/8] >> ((8-bmp_x) % 8)) & 1;
+	return (row_data[bmp_x/8] >> ((7-bmp_x) % 8)) & 1;
 }
 
 static int div_up(int num, int denom) {

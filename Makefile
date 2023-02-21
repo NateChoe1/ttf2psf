@@ -16,9 +16,11 @@ work/%.o: src/%.c $(wildcard src/include/*.h)
 
 install: build/$(OUT)
 	cp build/$(OUT) $(INSTALLDIR)/$(OUT)
+	cp -r ./data /usr/share/ttf2psf
 
 uninstall: $(INSTALLDIR)/$(OUT)
 	rm $(INSTALLDIR)/$(OUT)
+	rm -r /usr/share/ttf2psf
 
 clean: $(CLEAN)
 	rm $(CLEAN)
