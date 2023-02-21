@@ -120,15 +120,8 @@ int main(int argc, char **argv) {
 	}
 
 	{
-		FT_Size_RequestRec request = {
-			.type = FT_SIZE_REQUEST_TYPE_BBOX,
-			.width = (width << 6) * 5 / 3,
-			.height = height << 6,
-			.horiResolution = 0,
-			.vertResolution = 0,
-		};
-		error = FT_Request_Size(face, &request);
-		/* TODO: Get bounding box working */
+		int px = width * face->units_per_EM / face->max_advance_width;
+		error = FT_Set_Pixel_Sizes(face, px, px);
 	}
 
 	if (error) {
