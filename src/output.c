@@ -59,6 +59,17 @@ int write_psf(int width, int height, struct psf_interface *interface,
 			}
 		}
 	}
+	if (charset->size > 512) {
+		fprintf(stderr, "Warning: Large number of glyphs in the "
+				"charset (%d)\n", charset->size);
+	}
+	else {
+		while (charset->size != 256 && charset->size != 512) {
+			if (add_char(charset, 32)) {
+				goto error;
+			}
+		}
+	}
 	for (;;) {
 		uint32_t *line;
 		int line_len;
