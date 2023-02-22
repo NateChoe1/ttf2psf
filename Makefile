@@ -1,6 +1,6 @@
 SRC = $(wildcard src/*.c)
 OBJ = $(subst .c,.o,$(subst src,work,$(SRC)))
-CFLAGS := -pipe -Wall -Wpedantic -Wshadow
+CFLAGS := -O2 -pipe -Wall -Wpedantic -Wshadow
 CFLAGS += -Isrc/include/
 LIBS = freetype2
 LDFLAGS = $(shell pkg-config --libs $(LIBS))
