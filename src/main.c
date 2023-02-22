@@ -19,6 +19,9 @@
 #include <string.h>
 #include <getopt.h>
 
+#include <fcntl.h>
+#include <unistd.h>
+
 #include <ft2build.h>
 #include FT_FREETYPE_H
 
@@ -28,6 +31,8 @@
 static void print_help(char *prog_name);
 static inline long min(long a, long b);
 static FILE *xfopen(char *filename, char *mode);
+static FILE *xgfopen(char *filename);
+/* data -> returned file -> gzip -> filename */
 
 int main(int argc, char **argv) {
 	int error;
@@ -37,13 +42,14 @@ int main(int argc, char **argv) {
 	int width, height;
 	struct psf_interface *interface;
 	char *charset_name, *equivalence_name;
+	int gzip = 0;
 
 	interface = &psf2_interface;
 	width = 8;
 	height = 16;
 	charset_name = equivalence_name = NULL;
 	for (;;) {
-		int opt = getopt(argc, argv, "12hw:r:c:e:");
+		int opt = getopt(argc, argv, "12hgw:r:c:e:");
 		if (opt < 0) {
 			break;
 		}
@@ -57,6 +63,9 @@ int main(int argc, char **argv) {
 		case 'h':
 			print_help(argv[0]);
 			return 0;
+		case 'g':
+			gzip = 1;
+			break;
 		case 'w':
 			width = atoi(optarg);
 			if (width == 0 || height < 0) {
@@ -98,7 +107,12 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 
-	output = xfopen(argv[optind + 1], "w");
+	if (gzip) {
+		output = xgfopen(argv[optind + 1]);
+	}
+	else {
+		output = xfopen(argv[optind + 1], "w");
+	}
 	charset = xfopen(charset_name, "r");
 	equivalence = xfopen(equivalence_name, "r");
 
@@ -135,11 +149,12 @@ int main(int argc, char **argv) {
 
 static void print_help(char *prog_name) {
 	fprintf(stderr,
-"Usage: %s (-1) (-2) (-h) (-w [char width]) (-r [char height])\n"
+"Usage: %s (-1) (-2) (-g) (-h) (-w [char width]) (-r [char height])\n"
 "               -c [char set] -e [equivalence file]\n"
 "               [input font] [output font.psfu]\n"
 "    -1     : Output a psf1 file\n"
 "    -2     : Output a psf2 file (default)\n"
+"    -g     : Output a gzip compressed file\n"
 "    -h     : Show this help menu\n"
 "    -w, -r : Sets character width and row count respectively (default: 8x16)\n"
 "    -c     : Specify a character set (see /usr/share/ttf2psf/charsets\n"
@@ -162,4 +177,44 @@ static FILE *xfopen(char *filename, char *mode) {
 		exit(EXIT_FAILURE);
 	}
 	return ret;
+}
+
+static FILE *xgfopen(char *filename) {
+#define CLOSE(fd) { if (close(fd) < 0) { perror("close() failed"); } }
+#define DUP2(old, new) { if (dup2(old, new) < 0) { perror("dup2() failed"); } }
+	int fd[2], outfd;
+	pid_t pid;
+	FILE *ret;
+	if (pipe(fd) < 0) {
+		perror("Failed to open pipe");
+		exit(EXIT_FAILURE);
+	}
+	pid = fork();
+	switch (pid) {
+	case -1:
+		perror("fork() failed");
+		exit(EXIT_FAILURE);
+	case 0:
+		outfd = open(filename, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		if (outfd < 0) {
+			perror("open() failed");
+			exit(EXIT_FAILURE);
+		}
+		CLOSE(fd[1]);
+		DUP2(fd[0], 0);
+		DUP2(outfd, 1);
+		execlp("gzip", "gzip", "-c", NULL);
+		perror("execlp() failed");
+		exit(EXIT_FAILURE);
+	default:
+		CLOSE(fd[0]);
+		ret = fdopen(fd[1], "w");
+		if (ret == NULL) {
+			fputs("fdopen() failed\n", stderr);
+			exit(EXIT_FAILURE);
+		}
+		return ret;
+	}
+#undef CLOSE
+#undef DUP2
 }
