@@ -184,7 +184,8 @@ static inline int get_bit(FT_Face face,
 	const int
 		left_edge = glyph->bitmap_left,
 		top_edge = max_height - glyph->bitmap_top,
-		right_edge = left_edge + bmp->pitch * 8,
+		//right_edge = left_edge + bmp->pitch * 8,
+		right_edge = left_edge + bmp->width,
 		bot_edge = top_edge + bmp->rows;
 
 	if (col < left_edge || col >= right_edge ||
