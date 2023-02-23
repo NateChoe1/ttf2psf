@@ -28,7 +28,6 @@ struct glyph *read_face(FT_Face face, int *glyph_count);
 static int write_glyph(FT_Face face, int width, int height, FILE *output);
 static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height);
-static int div_up(int num, int denom);
 
 int write_psf(int width, int height, struct psf_interface *interface,
 		FILE *charset_file, FILE *equivalence_file,
@@ -174,10 +173,14 @@ static inline int get_bit(FT_Face face,
 		int row, int col, int width, int height) {
 	const FT_GlyphSlot glyph = face->glyph;
 	const FT_Bitmap *bmp = &glyph->bitmap;
+	const FT_UShort 
+		//x_ppem = face->size->metrics.x_ppem,
+		// For now x_ppem isn't used
+		y_ppem = face->size->metrics.y_ppem;
+	const int max_height = face->bbox.yMax * y_ppem / face->units_per_EM;
 	const int
 		left_edge = glyph->bitmap_left,
-		top_edge = (height - 1) - glyph->bitmap_top -
-			div_up(face->bbox.yMin, face->units_per_EM) - 1,
+		top_edge = max_height - glyph->bitmap_top,
 		right_edge = left_edge + bmp->pitch * 8,
 		bot_edge = top_edge + bmp->rows;
 
@@ -198,9 +201,4 @@ static inline int get_bit(FT_Face face,
 	row_data += bmp->pitch * bmp_y;
 
 	return (row_data[bmp_x/8] >> ((7-bmp_x) % 8)) & 1;
-}
-
-static int div_up(int num, int denom) {
-	int ret = num / denom;
-	return ret + (num % denom) ? 1:0;
 }
