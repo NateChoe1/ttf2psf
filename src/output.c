@@ -69,39 +69,42 @@ int write_psf(int width, int height, struct psf_interface *interface,
 			}
 		}
 	}
-	for (;;) {
-		uint32_t *line;
-		int line_len;
+	if (equivalence_file != NULL) {
+		for (;;) {
+			uint32_t *line;
+			int line_len;
 next_equivalence:
-		line = read_unichars(equivalence_file, &line_len);
-		if (line == NULL) {
-			if (line_len == 0) {
-				break;
-			}
-			else {
-				goto error;
-			}
-		}
-		for (int i = line_len - 1; i >= 0; --i) {
-			struct glyph *glyph;
-			glyph = search_glyph(charset, line[i]);
-			if (glyph == NULL) {
-				continue;
-			}
-			for (int j = 0; j < line_len; ++j) {
-				if (j == i) {
-					continue;
+			line = read_unichars(equivalence_file, &line_len);
+			if (line == NULL) {
+				if (line_len == 0) {
+					break;
 				}
-				if (add_equivalent(glyph, line[j])) {
+				else {
 					goto error;
 				}
 			}
-			goto next_equivalence;
-			/* This goto is basically a 2 level continue statement,
-			 * you can't do that in C all too well. */
+			for (int i = line_len - 1; i >= 0; --i) {
+				struct glyph *glyph;
+				glyph = search_glyph(charset, line[i]);
+				if (glyph == NULL) {
+					continue;
+				}
+				for (int j = 0; j < line_len; ++j) {
+					if (j == i) {
+						continue;
+					}
+					if (add_equivalent(glyph, line[j])) {
+						goto error;
+					}
+				}
+				goto next_equivalence;
+				/* This goto is basically a 2 level continue
+				 * statement, you can't do that in C all too
+				 * well. */
+			}
+			fputs("Warning: Equivalence file includes characters "
+					"not in the charset!\n", stderr);
 		}
-		fputs("Warning: Equivalence file includes characters not in "
-				"the charset!\n", stderr);
 	}
 	/* Generate charset */
 

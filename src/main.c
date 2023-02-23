@@ -42,14 +42,15 @@ int main(int argc, char **argv) {
 	int width, height;
 	struct psf_interface *interface;
 	char *charset_name, *equivalence_name;
-	int gzip = 0;
+	int gzip;
 
 	interface = &psf2_interface;
 	width = 8;
 	height = 16;
 	charset_name = equivalence_name = NULL;
+	gzip = 0;
 	for (;;) {
-		int opt = getopt(argc, argv, "12hgw:r:c:e:");
+		int opt = getopt(argc, argv, "12hgdw:r:c:e:");
 		if (opt < 0) {
 			break;
 		}
@@ -102,9 +103,7 @@ int main(int argc, char **argv) {
 		return 1;
 	}
 	if (equivalence_name == NULL) {
-		fputs("No equivalence file specified\n", stderr);
-		print_help(argv[0]);
-		return 1;
+		fputs("Warning: No equivalence file specified\n", stderr);
 	}
 
 	if (gzip) {
@@ -114,7 +113,12 @@ int main(int argc, char **argv) {
 		output = xfopen(argv[optind + 1], "w");
 	}
 	charset = xfopen(charset_name, "r");
-	equivalence = xfopen(equivalence_name, "r");
+	if (equivalence_name != NULL) {
+		equivalence = xfopen(equivalence_name, "r");
+	}
+	else {
+		equivalence = NULL;
+	}
 
 	error = FT_Init_FreeType(&library);
 	if (error) {
@@ -135,7 +139,15 @@ int main(int argc, char **argv) {
 
 	{
 		int px = width * face->units_per_EM / face->max_advance_width;
+		int ideal_height;
 		error = FT_Set_Pixel_Sizes(face, px, px);
+		ideal_height = (face->bbox.yMax - face->bbox.yMin) *
+			face->size->metrics.y_ppem / face->units_per_EM;
+		if (ideal_height != height) {
+			fprintf(stderr,
+"Warning: Height not ideal for width (%d px specified, %d ideal)\n",
+			height, ideal_height);
+		}
 	}
 
 	if (error) {
