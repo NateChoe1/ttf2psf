@@ -169,8 +169,8 @@ static void print_help(char *prog_name) {
 "    -g     : Output a gzip compressed file\n"
 "    -h     : Show this help menu\n"
 "    -w, -r : Sets character width and row count respectively (default: 8x16)\n"
-"    -c     : Specify a character set (see /usr/share/ttf2psf/charsets\n"
-"    -e     : Specify an equivalence file (see /usr/share/ttf2psf/equivalence\n"
+"    -c     : Specify a character set (see /usr/share/ttf2psf/charsets)\n"
+"    -e     : Specify an equivalence file (see /usr/share/ttf2psf/equivalence)\n"
 			,
 			prog_name);
 }
