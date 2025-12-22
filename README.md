@@ -6,10 +6,18 @@ This just converts files to psf format with freetype, nothing else.
 
     ttf2psf -g -c [charset file] -e [equivalence file] input.ttf output.psfu.gz
 
-> [!important]
-> When the psf/psfu file is being built, it will give a bunch of warnings, they mean nothing but you also cant get rid of them
+> [!note]
+> When generating a psf file, you may get the following warning:
 >
-> No matter the amount of warnings you get the output file you have defined will be created either way, the warnings just tell you that the output file doesnt have 100% of the charset but only 95%, which i would hope is plenty - otherwise i guess you can try solving all the warnings
+> ```
+> Warning: Equivalence file includes characters not in the charset!
+> ```
+>
+> This generally means that the equivalence file and the charset file aren't
+> exactly compatible. This can usually be ignored, but if these files were
+> generated with a utility like
+> [psfextract](https://github.com/NateChoe1/psfextract) it may be a sign that
+> something has gone wrong.
 
 ## Usage
 

@@ -16,6 +16,7 @@
 
 #include <stdio.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
@@ -70,6 +71,7 @@ int write_psf(int width, int height, struct psf_interface *interface,
 		}
 	}
 	if (equivalence_file != NULL) {
+		bool equiv_redundant = false;
 		for (;;) {
 			uint32_t *line;
 			int line_len;
@@ -102,6 +104,9 @@ next_equivalence:
 				 * statement, you can't do that in C all too
 				 * well. */
 			}
+			equiv_redundant = true;
+		}
+		if (equiv_redundant) {
 			fputs("Warning: Equivalence file includes characters "
 					"not in the charset!\n", stderr);
 		}
