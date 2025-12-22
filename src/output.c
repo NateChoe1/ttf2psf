@@ -85,6 +85,9 @@ next_equivalence:
 					goto error;
 				}
 			}
+			if (line_len == 0) {
+				continue;
+			}
 			for (int i = line_len - 1; i >= 0; --i) {
 				struct glyph *glyph;
 				glyph = search_glyph(charset, line[i]);
